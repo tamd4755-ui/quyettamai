@@ -269,7 +269,22 @@
     </div>
 </div>
 
-<script>
+<!-- NẠP SDK CHÍNH THỨC CỦA GOOGLE GEMINI -->
+<script type="importmap">
+  {
+    "imports": {
+      "@google/genai": "https://esm.run/@google/genai"
+    }
+  }
+</script>
+
+<script type="module">
+    import { GoogleGenAI } from '@google/genai';
+
+    // Khóa API chính thức của bạn
+    const API_KEY = "AQ.Ab8RN6KNcEUlMSAeP9cgMz93oSxFcHR1PuCtxzYQJ5kpsxFHGQ";
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
+
     let selectedImageBase64 = null;
     let selectedImageMimeType = "";
     let currentUserName = "bạn";
@@ -288,31 +303,31 @@
         }
     };
 
-    function togglePasswordVisibility() {
+    window.togglePasswordVisibility = function() {
         const pwdInput = document.getElementById('authPassword');
         const eyeBtn = document.getElementById('btnToggleEye');
         if (pwdInput.type === 'password') { pwdInput.type = 'text'; eyeBtn.innerText = '🙈'; }
         else { pwdInput.type = 'password'; eyeBtn.innerText = '👁️'; }
-    }
+    };
 
-    function toggleSidebar() {
+    window.toggleSidebar = function() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
         if (window.innerWidth <= 768) { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('show'); }
         else { sidebar.classList.toggle('collapsed'); }
-    }
+    };
 
-    function closeMobileSidebar() {
+    window.closeMobileSidebar = function() {
         document.getElementById('sidebar').classList.remove('mobile-open');
         document.getElementById('sidebarOverlay').classList.remove('show');
-    }
+    };
 
-    function expandSidebarAndFocusAuth() {
+    window.expandSidebarAndFocusAuth = function() {
         document.getElementById('sidebar').classList.remove('collapsed');
         document.getElementById('authEmail').focus();
-    }
+    };
 
-    function openSearchScreen() {
+    window.openSearchScreen = function() {
         document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('msgs').classList.remove('active');
         document.getElementById('libraryScreen').classList.remove('active');
@@ -322,9 +337,9 @@
         document.getElementById('btnSearch').classList.add('active');
         document.getElementById('largeSearchInput').focus();
         closeMobileSidebar();
-    }
+    };
 
-    function openLibraryScreen() {
+    window.openLibraryScreen = function() {
         document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('msgs').classList.remove('active');
         document.getElementById('searchScreen').classList.remove('active');
@@ -333,9 +348,9 @@
         document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('btnLibrary').classList.add('active');
         closeMobileSidebar();
-    }
+    };
 
-    function filterRecentChats(query) {
+    window.filterRecentChats = function(query) {
         const list = document.getElementById('searchResultsList');
         list.innerHTML = '';
         if (!query.trim()) return;
@@ -349,9 +364,9 @@
                 list.appendChild(resItem);
             }
         });
-    }
+    };
 
-    function startNewChat() {
+    window.startNewChat = function() {
         document.getElementById('searchScreen').classList.remove('active');
         document.getElementById('libraryScreen').classList.remove('active');
         document.getElementById('inputWrapperBox').style.display = 'block';
@@ -362,9 +377,9 @@
         document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('btnNewChat').classList.add('active');
         closeMobileSidebar();
-    }
+    };
 
-    function openPopover(e, itemId) {
+    window.openPopover = function(e, itemId) {
         e.stopPropagation();
         activeTargetItemId = itemId;
         const popover = document.getElementById('itemPopover');
@@ -372,9 +387,9 @@
         popover.style.top = `${rect.top}px`;
         popover.style.left = `${rect.right + 10}px`;
         popover.classList.add('show');
-    }
+    };
 
-    function popoverAction(action) {
+    window.popoverAction = function(action) {
         const popover = document.getElementById('itemPopover');
         popover.classList.remove('show');
         if (!activeTargetItemId) return;
@@ -387,7 +402,7 @@
         } else if (action === 'share') { alert("Đã sao chép liên kết!"); }
         else if (action === 'pin') { alert("Đã ghim cuộc trò chuyện!"); }
         else if (action === 'notebook') { alert("Đã thêm vào sổ ghi chú!"); }
-    }
+    };
 
     document.addEventListener('click', (e) => {
         const popover = document.getElementById('itemPopover');
@@ -396,7 +411,7 @@
 
     function updateWelcomeTitle(name) { document.getElementById('welcomeTitle').innerText = `Chào ${name}, tiếp theo mình làm gì?`; }
 
-    function toggleAuthMode() {
+    window.toggleAuthMode = function() {
         isSignUpMode = !isSignUpMode;
         const nameInput = document.getElementById('authName');
         const title = document.getElementById('authTitle');
@@ -408,9 +423,9 @@
         } else {
             nameInput.style.display = 'none'; title.innerText = 'Đăng nhập tài khoản'; submitBtn.innerText = 'Đăng Nhập'; switchText.innerText = 'Chưa có tài khoản?'; switchBtn.innerText = 'Đăng ký';
         }
-    }
+    };
 
-    function handleAuthSubmit() {
+    window.handleAuthSubmit = function() {
         const email = document.getElementById('authEmail').value.trim();
         const password = document.getElementById('authPassword').value.trim();
         const name = document.getElementById('authName').value.trim();
@@ -436,7 +451,7 @@
                 currentUserName = autoName; showLoggedInState(autoName);
             }
         }
-    }
+    };
 
     function showLoggedInState(userName) {
         document.getElementById('authBox').style.display = 'none';
@@ -446,18 +461,18 @@
         updateWelcomeTitle(userName);
     }
 
-    function logout() {
+    window.logout = function() {
         localStorage.removeItem('currentUser');
         document.getElementById('authBox').style.display = 'flex';
         document.getElementById('userFooter').style.display = 'none';
         currentUserName = "bạn"; updateWelcomeTitle(currentUserName);
-    }
+    };
 
-    function toggleMenu(e) { e.stopPropagation(); document.getElementById('attachMenu').classList.toggle('show'); }
+    window.toggleMenu = function(e) { e.stopPropagation(); document.getElementById('attachMenu').classList.toggle('show'); };
     document.addEventListener('click', (e) => { const menu = document.getElementById('attachMenu'); if (!menu.contains(e.target)) menu.classList.remove('show'); });
-    function triggerFileInput() { document.getElementById('fileInput').click(); document.getElementById('attachMenu').classList.remove('show'); }
+    window.triggerFileInput = function() { document.getElementById('fileInput').click(); document.getElementById('attachMenu').classList.remove('show'); };
 
-    function handleFileSelect(e) {
+    window.handleFileSelect = function(e) {
         const file = e.target.files[0];
         if (file) {
             selectedImageMimeType = file.type;
@@ -470,33 +485,33 @@
             };
             reader.readAsDataURL(file);
         }
-    }
+    };
 
-    function removeSelectedImage() {
+    window.removeSelectedImage = function() {
         selectedImageBase64 = null; selectedImageMimeType = "";
         document.getElementById('fileInput').value = "";
         document.getElementById('imgPreviewBox').classList.remove('show');
-    }
+    };
 
-    function selectFeature(featureName) {
+    window.selectFeature = function(featureName) {
         const inp = document.getElementById('inp');
         inp.value = `[${featureName}]: `; inp.focus();
         document.getElementById('attachMenu').classList.remove('show');
-    }
+    };
 
-    async function downloadImage(url) {
+    window.downloadImage = async function(url) {
         try {
             const res = await fetch(url); const blob = await res.blob();
             const blobUrl = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = blobUrl; a.download = `quyettam_ai_${Date.now()}.jpg`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(blobUrl);
         } catch (e) { window.open(url, '_blank'); }
-    }
+    };
 
-    function shareImage(url) {
+    window.shareImage = function(url) {
         if (navigator.share) { navigator.share({ title: 'QUYẾT TÂM AI', url }).catch(() => {}); }
         else { navigator.clipboard.writeText(url); alert("Đã sao chép đường dẫn hình ảnh!"); }
-    }
+    };
 
     function addRecentChatItem(titleText) {
         const recentList = document.getElementById('recentList');
@@ -511,8 +526,8 @@
         `);
     }
 
-    // HÀM GỬI TIN NHẮN ĐÃ HOÀN THIỆN
-    async function send() {
+    // HÀM GỬI TIN NHẮN BẰNG SDK GOOGLE AI
+    window.send = async function() {
         let inp = document.getElementById('inp');
         let txt = inp.value.trim();
         if (!txt && !selectedImageBase64) return;
@@ -544,7 +559,7 @@
         let loading = document.createElement('div');
         loading.className = 'msg ai';
 
-        // Xử lý tạo ảnh
+        // Xử lý tạo hình ảnh
         if (txt.startsWith("[Tạo hình ảnh]:") || txt.toLowerCase().includes("tạo ảnh") || txt.toLowerCase().includes("vẽ ảnh")) {
             let promptText = txt.replace("[Tạo hình ảnh]:", "").trim();
             if (!promptText) promptText = "bức tranh thiên nhiên đẹp";
@@ -581,26 +596,36 @@
 
         inp.value = ''; removeSelectedImage();
 
-        // Gọi Backend Serverless Vercel
+        // Gọi trực tiếp qua SDK Gemini chính thức
         try {
-            const res = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: txt })
+            let contents = [];
+            if (currentImgBase64) {
+                contents.push({
+                    inlineData: {
+                        mimeType: currentImgMime,
+                        data: currentImgBase64
+                    }
+                });
+            }
+            if (txt) contents.push(txt);
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: contents
             });
 
-            const data = await res.json();
-            if (data.reply) {
-                loading.innerText = data.reply;
+            if (response && response.text) {
+                loading.innerText = response.text;
             } else {
-                loading.innerText = "Lỗi từ Gemini: " + (data.error || "Không thể phản hồi.");
+                loading.innerText = "Không thể lấy phản hồi từ AI.";
             }
         } catch (err) {
-            loading.innerText = "Lỗi kết nối mạng hoặc Server!";
+            console.error(err);
+            loading.innerText = "Lỗi kết nối Gemini: " + (err.message || "Không thể phản hồi.");
         }
 
         msgs.scrollTop = msgs.scrollHeight;
-    }
+    };
 </script>
 
 </body>
