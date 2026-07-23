@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     if (!message) return res.status(400).json({ error: 'Missing message' });
 
     // Khóa API mới vừa tạo từ dự án mới
-    const API_KEY = "AQ.Ab8RN6KNcEUlMSAeP9cgMz93oSxFcHR1PuCtxzYQJ5kpsxFHGQ";
+    const API_KEY = "AQ.Ab8RN6JYhn6X_rejQpICIwT1hbnA2Yz1hPJfiJzLzWMC8cw8LA";
 
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
