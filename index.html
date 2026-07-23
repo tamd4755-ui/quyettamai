@@ -270,6 +270,12 @@
 </div>
 
 <script>
+    // Danh sách 2 khóa API trực tiếp
+    const API_KEYS = [
+        "AQ.Ab8RN6IBdQiy-R2Y9a0uYr3E4MgcOHdoHJH3zQ7r8KMU9OYdcw",
+        "AQ.Ab8RN6LwugzoEtrwh9oE6_4mB01_Gb9bo5wEfm094_hjPGMcBw"
+    ];
+
     let selectedImageBase64 = null;
     let selectedImageMimeType = "";
     let currentUserName = "bạn";
@@ -511,10 +517,42 @@
         `);
     }
 
+    // Hàm gọi trực tiếp API Google từ trình duyệt
+    async function fetchGeminiAI(userText, imageBase64, imageMime) {
+        let contentsParts = [];
+        if (imageBase64) {
+            contentsParts.push({ inline_data: { mime_type: imageMime, data: imageBase64 } });
+        }
+        if (userText) {
+            contentsParts.push({ text: userText });
+        }
+
+        for (let key of API_KEYS) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: contentsParts }] })
+                });
+
+                const data = await res.json();
+                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    return data.candidates[0].content.parts[0].text;
+                }
+            } catch (err) {
+                console.error("Lỗi thử key:", err);
+            }
+        }
+        return null;
+    }
+
     async function send() {
         let inp = document.getElementById('inp');
         let txt = inp.value.trim();
         if (!txt && !selectedImageBase64) return;
+
+        let currentImgBase64 = selectedImageBase64;
+        let currentImgMime = selectedImageMimeType;
 
         if (isFirstMessageInSession) {
             let sessionTitle = txt ? txt : "Cuộc trò chuyện hình ảnh";
@@ -532,7 +570,7 @@
         document.getElementById('attachMenu').classList.remove('show');
 
         let userMessageHtml = `<div class='msg user'>`;
-        if (selectedImageBase64) { userMessageHtml += `<img src="data:${selectedImageMimeType};base64,${selectedImageBase64}">`; }
+        if (currentImgBase64) { userMessageHtml += `<img src="data:${currentImgMime};base64,${currentImgBase64}">`; }
         if (txt) { userMessageHtml += `<div>${txt}</div>`; }
         userMessageHtml += `</div>`;
         msgs.innerHTML += userMessageHtml;
@@ -576,21 +614,11 @@
 
         inp.value = ''; removeSelectedImage();
 
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: txt })
-            });
-
-            const result = await response.json();
-            if (result.reply) {
-                loading.innerText = result.reply;
-            } else {
-                loading.innerText = result.error || "Không nhận được phản hồi từ hệ thống.";
-            }
-        } catch (e) {
-            loading.innerText = "Lỗi kết nối đến máy chủ Vercel backend.";
+        const aiReply = await fetchGeminiAI(txt, currentImgBase64, currentImgMime);
+        if (aiReply) {
+            loading.innerText = aiReply;
+        } else {
+            loading.innerText = "Không thể kết nối đến AI. Vui lòng kiểm tra lại kết nối mạng!";
         }
 
         msgs.scrollTop = msgs.scrollHeight;
