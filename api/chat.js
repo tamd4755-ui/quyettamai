@@ -9,11 +9,11 @@ export default async function handler(req, res) {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'Missing message' });
 
-    // Khóa API duy nhất của bạn từ Google AI Studio
-    const API_KEY = "AQ.Ab8RN6JYhn6X_rejQpIClwT1hbnA2Yz1hPJfiJzLzWMC8cw8LA";
+    // Khóa API mới vừa tạo từ dự án mới
+    const API_KEY = "AQ.Ab8RN6KNcEUlMSAeP9cgMz93oSxFcHR1PuCtxzYQJ5kpsxFHGQ";
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
