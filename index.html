@@ -5,69 +5,477 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QUYẾT TÂM AI</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✦</text></svg>">
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #131314; color: #e3e3e3; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .app-layout { display: flex; width: 100vw; height: 100vh; background: #131314; overflow: hidden; }
-        .sidebar { width: 280px; background: #1e1e20; color: #e3e3e3; display: flex; flex-direction: column; padding: 16px 12px; border-right: 1px solid #28292a; }
-        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 16px 6px; }
-        .brand-logo { font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
-        .sidebar-menu { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-        .menu-btn { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 24px; color: #ccc; font-size: 0.9rem; cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; }
+        ::-webkit-scrollbar { width: 0px; height: 0px; background: transparent; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .app-layout { display: flex; width: 100vw; height: 100vh; background: #131314; overflow: hidden; position: relative; }
+        .sidebar { width: 280px; background: #1e1e20; color: #e3e3e3; display: flex; flex-direction: column; padding: 16px 12px; border-right: 1px solid #28292a; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 100; position: relative; overflow: hidden; flex-shrink: 0; }
+        .sidebar.collapsed { width: 68px; padding: 16px 10px; align-items: center; }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 16px 6px; white-space: nowrap; width: 100%; }
+        .sidebar.collapsed .sidebar-header { justify-content: center; padding-bottom: 20px; }
+        .brand-logo { font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .btn-toggle-sidebar { background: none; border: none; color: #c4c7c5; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.2s; width: 38px; height: 38px; }
+        .btn-toggle-sidebar:hover { background: #2f3032; color: #fff; }
+        .sidebar-menu { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 6px; margin-top: 12px; width: 100%; }
+        .menu-group-title { font-size: 0.78rem; color: #888; font-weight: 600; padding: 10px 12px 4px 12px; white-space: nowrap; }
+        .sidebar.collapsed .menu-group-title { display: none; }
+        .menu-btn { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 24px; color: #ccc; font-size: 0.9rem; cursor: pointer; transition: 0.2s; border: none; background: transparent; width: 100%; text-align: left; white-space: nowrap; position: relative; }
+        .sidebar.collapsed .menu-btn { justify-content: center; padding: 10px 0; width: 48px; height: 48px; border-radius: 50%; margin: 0 auto; }
         .menu-btn:hover { background: #2f3032; color: #fff; }
         .menu-btn.active { background: #282a2d; color: #fff; font-weight: 600; }
-        .chat-container { flex: 1; display: flex; flex-direction: column; background: #131314; height: 100vh; width: 100%; overflow: hidden; }
-        .welcome-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .welcome-title { font-size: 2.3rem; font-weight: 500; background: linear-gradient(90deg, #4285f4 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .messages { flex: 1; padding: 20px 15%; overflow-y: auto; display: none; flex-direction: column; gap: 16px; }
+        .menu-btn-icon { font-size: 1.2rem; min-width: 24px; text-align: center; }
+        .menu-btn-text { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        .btn-more-item { display: none; background: none; border: none; color: #aaa; font-size: 1.1rem; cursor: pointer; padding: 2px 6px; border-radius: 50%; }
+        .menu-btn:hover .btn-more-item { display: block; }
+        .btn-more-item:hover { color: #fff; background: #3c3f43; }
+        .sidebar.collapsed .menu-btn-text, .sidebar.collapsed .brand-title-text, .sidebar.collapsed .user-info, .sidebar.collapsed .btn-more-item { display: none; }
+        
+        .chat-action-popover { display: none; position: absolute; background: #282a2d; border-radius: 12px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 999; width: 210px; border: 1px solid #3c3f43; flex-direction: column; gap: 2px; }
+        .chat-action-popover.show { display: flex; }
+        .popover-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 8px; color: #e3e3e3; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .popover-item:hover { background: #3c3f43; color: #fff; }
+
+        .sidebar-footer { padding-top: 12px; border-top: 1px solid #28292a; margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-auth-box { background: #28292a; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar.collapsed .sidebar-auth-box { display: none !important; }
+        .collapsed-auth-btn { display: none; width: 44px; height: 44px; border-radius: 50%; background: #282a2d; color: #4285f4; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; margin: 0 auto; transition: 0.2s; }
+        .collapsed-auth-btn:hover { background: #3c3f43; color: #fff; }
+        .sidebar.collapsed .collapsed-auth-btn { display: flex; }
+        .auth-title { font-size: 0.85rem; font-weight: 700; color: #fff; text-align: center; }
+        .auth-input { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #3c3f43; background: #131314; color: #fff; font-size: 0.8rem; outline: none; }
+        .auth-input:focus { border-color: #4b90ff; }
+        .password-input-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+        .password-input-wrapper .auth-input { padding-right: 32px; }
+        .btn-toggle-eye { position: absolute; right: 8px; background: none; border: none; color: #aaa; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; padding: 2px; }
+        .btn-toggle-eye:hover { color: #fff; }
+        .btn-auth { width: 100%; padding: 8px; border: none; border-radius: 16px; background: #1a73e8; color: #fff; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
+        .btn-auth:hover { background: #1557b0; }
+        .auth-switch-text { font-size: 0.72rem; color: #aaa; text-align: center; }
+        .auth-switch-text span { color: #4b90ff; cursor: pointer; font-weight: 600; }
+
+        .user-profile { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .sidebar.collapsed .user-profile { justify-content: center; }
+        .user-info-box { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: #1a73e8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; min-width: 36px; cursor: pointer; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-size: 0.85rem; font-weight: 600; color: #fff; }
+        .user-badge { font-size: 0.7rem; color: #888; }
+
+        .chat-container { flex: 1; display: flex; flex-direction: column; position: relative; background: #131314; height: 100vh; width: 100%; overflow: hidden; }
+        .mobile-header-bar { display: none; padding: 12px 16px; align-items: center; gap: 12px; background: #131314; }
+        .welcome-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; }
+        .welcome-title { font-size: 2.3rem; font-weight: 500; margin-bottom: 24px; background: linear-gradient(90deg, #4285f4 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .search-screen { display: none; flex: 1; flex-direction: column; align-items: center; padding: 40px 20px 20px 20px; width: 100%; }
+        .search-screen.active { display: flex; }
+        .search-box-large { width: 100%; max-width: 720px; background: #1e1e20; border-radius: 30px; padding: 12px 20px; display: flex; align-items: center; gap: 14px; border: 1px solid #28292a; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        .search-box-large input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 1.05rem; }
+        .search-box-large input::placeholder { color: #888; }
+        .search-results-list { width: 100%; max-width: 720px; margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+
+        .library-screen { display: none; flex: 1; flex-direction: column; padding: 40px 60px; width: 100%; overflow-y: auto; }
+        .library-screen.active { display: flex; }
+        .library-title { font-size: 2rem; font-weight: 500; color: #fff; margin-bottom: 32px; }
+        .library-section-title { font-size: 1.1rem; font-weight: 600; color: #e3e3e3; margin-bottom: 20px; }
+        .library-empty-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 50px 20px; gap: 14px; margin-bottom: 30px; }
+        .library-empty-text { font-size: 0.95rem; color: #9aa0a6; }
+
+        .messages { flex: 1; padding: 20px 15%; overflow-y: auto; display: none; flex-direction: column; gap: 16px; background: #131314; }
         .messages.active { display: flex; }
         .msg { padding: 12px 18px; border-radius: 18px; max-width: 80%; font-size: 1rem; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
-        .user { background: #282a2d; color: #fff; align-self: flex-end; }
-        .ai { background: #1e1e20; color: #e3e3e3; align-self: flex-start; border: 1px solid #28292a; }
-        .input-wrapper-center { width: 100%; max-width: 720px; padding: 0 16px 28px 16px; margin: 0 auto; }
-        .input-bar { display: flex; align-items: center; background: #1e1e20; border-radius: 30px; padding: 8px 16px; gap: 12px; border: 1px solid #28292a; }
+        .msg img { max-width: 100%; border-radius: 12px; margin-top: 8px; display: block; }
+        .user { background: #282a2d; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ai { background: #1e1e20; color: #e3e3e3; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #28292a; }
+
+        .ai-img-box { position: relative; margin-top: 8px; }
+        .img-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+        .btn-img-action { background: #282a2d; border: 1px solid #3c3f43; color: #ccc; border-radius: 16px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
+        .btn-img-action:hover { background: #3c3f43; color: #fff; }
+
+        .input-wrapper-center { width: 100%; max-width: 720px; padding: 0 16px 28px 16px; margin: 0 auto; position: relative; }
+        .image-preview-container { display: none; margin-bottom: 8px; }
+        .image-preview-container.show { display: block; }
+        .image-preview-container img { max-height: 80px; border-radius: 8px; border: 2px solid #4285f4; }
+        .btn-remove-img { position: absolute; top: -6px; right: -6px; background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; }
+
+        .input-bar { display: flex; align-items: center; background: #1e1e20; border-radius: 30px; padding: 8px 16px; gap: 12px; border: 1px solid #28292a; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .btn-plus { background: none; border: none; color: #aaa; font-size: 1.3rem; cursor: pointer; padding: 2px 4px; }
+        .btn-plus:hover { color: #fff; }
         .input-bar input { flex: 1; padding: 8px 4px; border: none; background: transparent; outline: none; font-size: 1rem; color: #fff; }
-        .btn-send { background: #282a2d; color: #aaa; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; }
+        .input-bar input::placeholder { color: #888; }
+        .btn-send { background: #282a2d; color: #aaa; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .btn-send:hover { background: #1a73e8; color: #fff; }
+
+        .attach-menu { display: none; position: absolute; bottom: 80px; left: 16px; background: #282a2d; border-radius: 12px; padding: 8px; width: 280px; z-index: 100; flex-direction: column; gap: 4px; border: 1px solid #3c3f43; }
+        .attach-menu.show { display: flex; }
+        .menu-item { display: flex; align-items: center; padding: 10px; border-radius: 8px; cursor: pointer; color: #fff; gap: 12px; }
+        .menu-item:hover { background: #3c3f43; }
+        .menu-title { font-size: 0.9rem; font-weight: 600; color: #fff; }
+        .menu-desc { font-size: 0.75rem; color: #aaa; }
+
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 90; }
+
+        @media (max-width: 768px) {
+            .mobile-header-bar { display: flex; }
+            .sidebar { position: fixed; top: 0; left: -280px; height: 100vh; z-index: 1000; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+            .sidebar.mobile-open { left: 0; width: 280px !important; }
+            .sidebar-overlay.show { display: block; }
+            .welcome-title { font-size: 1.6rem; padding: 0 10px; }
+            .messages { padding: 12px 10px; }
+            .msg { max-width: 90%; font-size: 0.92rem; padding: 10px 14px; }
+            .input-wrapper-center { padding: 0 10px 16px 10px; }
+            .library-screen { padding: 20px 16px; }
+        }
     </style>
 </head>
 <body>
 
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
 <div class="app-layout">
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <div class="brand-logo"><span style="color:#4285f4;">✦</span> QUYẾT TÂM AI</div>
+            <div class="brand-logo" onclick="toggleSidebar()">
+                <span style="font-size:1.3rem; color:#4285f4;">✦</span> 
+                <span class="brand-title-text">QUYẾT TÂM AI</span>
+            </div>
+            <button class="btn-toggle-sidebar" onclick="toggleSidebar()" title="Đóng/Mở Thanh bên">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect><line x1="9" y1="3" x2="9" y2="21"></line><path d="M13 15l3-3-3-3"></path></svg>
+            </button>
         </div>
+
         <div class="sidebar-menu">
-            <button class="menu-btn active" onclick="location.reload()">📝 Cuộc trò chuyện mới</button>
+            <button class="menu-btn active" id="btnNewChat" onclick="startNewChat()" title="Cuộc trò chuyện mới">
+                <span class="menu-btn-icon">📝</span> <span class="menu-btn-text">Cuộc trò chuyện mới</span>
+            </button>
+            <button class="menu-btn" id="btnSearch" onclick="openSearchScreen()" title="Tìm kiếm">
+                <span class="menu-btn-icon">🔍</span> <span class="menu-btn-text">Tìm kiếm trong các cuộc trò chuy...</span>
+            </button>
+            <button class="menu-btn" id="btnLibrary" onclick="openLibraryScreen()" title="Thư viện">
+                <span class="menu-btn-icon">㗊</span> <span class="menu-btn-text">Thư viện</span>
+            </button>
+            <div class="menu-group-title">Sổ ghi chú</div>
+            <button class="menu-btn" title="Sổ ghi chú mới">
+                <span class="menu-btn-icon">➕</span> <span class="menu-btn-text">Sổ ghi chú mới</span>
+            </button>
+            <div class="menu-group-title">Gần đây ❯</div>
+            <div class="recent-list" id="recentList"></div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="collapsed-auth-btn" onclick="expandSidebarAndFocusAuth()" title="Đăng nhập">👤</div>
+            <div class="sidebar-auth-box" id="authBox">
+                <div class="auth-title" id="authTitle">Đăng nhập tài khoản</div>
+                <input type="text" id="authName" class="auth-input" placeholder="Họ và tên..." style="display: none;">
+                <input type="email" id="authEmail" class="auth-input" placeholder="Email...">
+                <div class="password-input-wrapper">
+                    <input type="password" id="authPassword" class="auth-input" placeholder="Mật khẩu...">
+                    <button class="btn-toggle-eye" id="btnToggleEye" onclick="togglePasswordVisibility()" title="Ẩn/Hiện mật khẩu">👁️</button>
+                </div>
+                <button class="btn-auth" id="btnAuthSubmit" onclick="handleAuthSubmit()">Đăng Nhập</button>
+                <div class="auth-switch-text">
+                    <span id="authSwitchText">Chưa có tài khoản?</span> <span onclick="toggleAuthMode()" id="authSwitchBtn">Đăng ký</span>
+                </div>
+            </div>
+            <div class="user-profile" id="userFooter" style="display: none;">
+                <div class="user-info-box">
+                    <div class="avatar" id="userAvatar">B</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNameDisplay">Bạn</span>
+                        <span class="user-badge">Tài khoản Pro</span>
+                    </div>
+                </div>
+                <button class="btn-toggle-sidebar" onclick="logout()" title="Đăng xuất">🚪</button>
+            </div>
         </div>
     </div>
 
+    <div class="chat-action-popover" id="itemPopover">
+        <div class="popover-item" onclick="popoverAction('share')"><span>🔗</span> Chia sẻ cuộc trò chuyện</div>
+        <div class="popover-item" onclick="popoverAction('pin')"><span>📌</span> Ghim</div>
+        <div class="popover-item" onclick="popoverAction('rename')"><span>✏️</span> Đổi tên</div>
+        <div class="popover-item" onclick="popoverAction('notebook')"><span>📓</span> Thêm vào sổ ghi chú</div>
+        <div class="popover-item" onclick="popoverAction('delete')" style="color:#ff6b6b;"><span>🗑️</span> Xoá</div>
+    </div>
+
     <div class="chat-container">
+        <div class="mobile-header-bar">
+            <button class="btn-toggle-sidebar" onclick="toggleSidebar()">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <span style="font-size:1rem; font-weight:700;">QUYẾT TÂM AI</span>
+        </div>
+
+        <div class="search-screen" id="searchScreen">
+            <div class="search-box-large">
+                <span style="font-size:1.2rem; color:#aaa;">🔍</span>
+                <input type="text" id="largeSearchInput" placeholder="Tìm kiếm trong các cuộc trò chuyện" oninput="filterRecentChats(this.value)">
+            </div>
+            <div class="search-results-list" id="searchResultsList"></div>
+        </div>
+
+        <div class="library-screen" id="libraryScreen">
+            <h1 class="library-title">Thư viện</h1>
+            <div class="library-section-title">Tài liệu</div>
+            <div class="library-empty-box">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="3" ry="3"></rect><line x1="12" y1="9" x2="12" y2="15"></line><line x1="9" y1="12" x2="15" y2="12"></line></svg>
+                <div class="library-empty-text">Tài liệu bạn tạo sẽ xuất hiện ở đây</div>
+            </div>
+            <div class="library-section-title">Nội dung nghe nhìn</div>
+        </div>
+
         <div class="welcome-screen" id="welcomeScreen">
-            <h1 class="welcome-title">Chào bạn, tiếp theo mình làm gì?</h1>
+            <h1 class="welcome-title" id="welcomeTitle">Chào bạn, tiếp theo mình làm gì?</h1>
         </div>
 
         <div class="messages" id="msgs"></div>
 
-        <div class="input-wrapper-center">
+        <div class="input-wrapper-center" id="inputWrapperBox">
+            <div class="image-preview-container" id="imgPreviewBox">
+                <img id="imgPreview" src="" alt="Preview">
+                <button class="btn-remove-img" onclick="removeSelectedImage()">✕</button>
+            </div>
+
+            <div class="attach-menu" id="attachMenu">
+                <div class="menu-item" onclick="selectFeature('Tạo hình ảnh')">
+                    <span style="font-size:1.2rem;">🖼️</span>
+                    <div><div class="menu-title">Tạo hình ảnh</div><div class="menu-desc">Trực quan hóa mọi thứ</div></div>
+                </div>
+            </div>
+
             <div class="input-bar">
+                <button class="btn-plus" title="Đính kèm" onclick="toggleMenu(event)">+</button>
                 <input type="text" id="inp" placeholder="Hỏi QUYẾT TÂM AI..." onkeypress="if(event.key==='Enter') send()">
-                <button class="btn-send" onclick="send()">↑</button>
+                <button class="btn-send" onclick="send()" title="Gửi">↑</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Đã tích hợp sẵn Key Groq siêu tốc của bạn
     const GROQ_API_KEY = "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";
+
+    let currentUserName = "bạn";
+    let activeTargetItemId = null;
+    let isFirstMessageInSession = true;
+    let isSignUpMode = false;
+
+    window.onload = function() {
+        const loggedUser = localStorage.getItem('currentUser');
+        if (loggedUser) {
+            const userObj = JSON.parse(loggedUser);
+            currentUserName = userObj.name;
+            showLoggedInState(userObj.name);
+        } else {
+            updateWelcomeTitle(currentUserName);
+        }
+    };
+
+    window.togglePasswordVisibility = function() {
+        const pwdInput = document.getElementById('authPassword');
+        const eyeBtn = document.getElementById('btnToggleEye');
+        if (pwdInput.type === 'password') { pwdInput.type = 'text'; eyeBtn.innerText = '🙈'; }
+        else { pwdInput.type = 'password'; eyeBtn.innerText = '👁️'; }
+    };
+
+    window.toggleSidebar = function() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (window.innerWidth <= 768) { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('show'); }
+        else { sidebar.classList.toggle('collapsed'); }
+    };
+
+    window.closeMobileSidebar = function() {
+        document.getElementById('sidebar').classList.remove('mobile-open');
+        document.getElementById('sidebarOverlay').classList.remove('show');
+    };
+
+    window.expandSidebarAndFocusAuth = function() {
+        document.getElementById('sidebar').classList.remove('collapsed');
+        document.getElementById('authEmail').focus();
+    };
+
+    window.openSearchScreen = function() {
+        document.getElementById('welcomeScreen').style.display = 'none';
+        document.getElementById('msgs').classList.remove('active');
+        document.getElementById('libraryScreen').classList.remove('active');
+        document.getElementById('inputWrapperBox').style.display = 'none';
+        document.getElementById('searchScreen').classList.add('active');
+        document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btnSearch').classList.add('active');
+        document.getElementById('largeSearchInput').focus();
+        closeMobileSidebar();
+    };
+
+    window.openLibraryScreen = function() {
+        document.getElementById('welcomeScreen').style.display = 'none';
+        document.getElementById('msgs').classList.remove('active');
+        document.getElementById('searchScreen').classList.remove('active');
+        document.getElementById('inputWrapperBox').style.display = 'none';
+        document.getElementById('libraryScreen').classList.add('active');
+        document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btnLibrary').classList.add('active');
+        closeMobileSidebar();
+    };
+
+    window.filterRecentChats = function(query) {
+        const list = document.getElementById('searchResultsList');
+        list.innerHTML = '';
+        if (!query.trim()) return;
+        document.querySelectorAll('.recent-list .menu-btn-text').forEach(item => {
+            if (item.innerText.toLowerCase().includes(query.toLowerCase())) {
+                const resItem = document.createElement('div');
+                resItem.className = 'menu-btn';
+                resItem.style.background = '#1e1e20';
+                resItem.style.padding = '12px 18px';
+                resItem.innerHTML = `<span>💬</span> <span>${item.innerText}</span>`;
+                list.appendChild(resItem);
+            }
+        });
+    };
+
+    window.startNewChat = function() {
+        document.getElementById('searchScreen').classList.remove('active');
+        document.getElementById('libraryScreen').classList.remove('active');
+        document.getElementById('inputWrapperBox').style.display = 'block';
+        document.getElementById('msgs').innerHTML = '';
+        document.getElementById('msgs').classList.remove('active');
+        document.getElementById('welcomeScreen').style.display = 'flex';
+        isFirstMessageInSession = true;
+        document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btnNewChat').classList.add('active');
+        closeMobileSidebar();
+    };
+
+    window.openPopover = function(e, itemId) {
+        e.stopPropagation();
+        activeTargetItemId = itemId;
+        const popover = document.getElementById('itemPopover');
+        const rect = e.target.getBoundingClientRect();
+        popover.style.top = `${rect.top}px`;
+        popover.style.left = `${rect.right + 10}px`;
+        popover.classList.add('show');
+    };
+
+    window.popoverAction = function(action) {
+        const popover = document.getElementById('itemPopover');
+        popover.classList.remove('show');
+        if (!activeTargetItemId) return;
+        const targetElem = document.getElementById(activeTargetItemId);
+        if (action === 'delete') { if (targetElem) targetElem.remove(); }
+        else if (action === 'rename') {
+            const titleElem = document.getElementById(`title-${activeTargetItemId}`);
+            const newName = prompt("Nhập tên mới:", titleElem ? titleElem.innerText : "");
+            if (newName && titleElem) titleElem.innerText = newName;
+        } else if (action === 'share') { alert("Đã sao chép liên kết!"); }
+        else if (action === 'pin') { alert("Đã ghim cuộc trò chuyện!"); }
+        else if (action === 'notebook') { alert("Đã thêm vào sổ ghi chú!"); }
+    };
+
+    document.addEventListener('click', (e) => {
+        const popover = document.getElementById('itemPopover');
+        if (popover && !popover.contains(e.target)) popover.classList.remove('show');
+    });
+
+    function updateWelcomeTitle(name) { document.getElementById('welcomeTitle').innerText = `Chào ${name}, tiếp theo mình làm gì?`; }
+
+    window.toggleAuthMode = function() {
+        isSignUpMode = !isSignUpMode;
+        const nameInput = document.getElementById('authName');
+        const title = document.getElementById('authTitle');
+        const submitBtn = document.getElementById('btnAuthSubmit');
+        const switchText = document.getElementById('authSwitchText');
+        const switchBtn = document.getElementById('authSwitchBtn');
+        if (isSignUpMode) {
+            nameInput.style.display = 'block'; title.innerText = 'Đăng ký tài khoản'; submitBtn.innerText = 'Đăng Ký'; switchText.innerText = 'Đã có tài khoản?'; switchBtn.innerText = 'Đăng nhập';
+        } else {
+            nameInput.style.display = 'none'; title.innerText = 'Đăng nhập tài khoản'; submitBtn.innerText = 'Đăng Nhập'; switchText.innerText = 'Chưa có tài khoản?'; switchBtn.innerText = 'Đăng ký';
+        }
+    };
+
+    window.handleAuthSubmit = function() {
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value.trim();
+        const name = document.getElementById('authName').value.trim();
+        if (!email || !password) { alert('Vui lòng điền Email và Mật khẩu!'); return; }
+        if (isSignUpMode) {
+            if (!name) { alert('Vui lòng nhập Họ tên!'); return; }
+            const userObj = { name, email, password };
+            localStorage.setItem(`user_${email}`, JSON.stringify(userObj));
+            localStorage.setItem('currentUser', JSON.stringify(userObj));
+            currentUserName = name; showLoggedInState(name);
+        } else {
+            const savedUser = localStorage.getItem(`user_${email}`);
+            if (savedUser) {
+                const userObj = JSON.parse(savedUser);
+                if (userObj.password === password) {
+                    localStorage.setItem('currentUser', JSON.stringify(userObj));
+                    currentUserName = userObj.name; showLoggedInState(userObj.name);
+                } else { alert('Sai mật khẩu!'); }
+            } else {
+                const autoName = email.split('@')[0];
+                const userObj = { name: autoName, email, password };
+                localStorage.setItem('currentUser', JSON.stringify(userObj));
+                currentUserName = autoName; showLoggedInState(autoName);
+            }
+        }
+    };
+
+    function showLoggedInState(userName) {
+        document.getElementById('authBox').style.display = 'none';
+        document.getElementById('userFooter').style.display = 'flex';
+        document.getElementById('userNameDisplay').innerText = userName;
+        document.getElementById('userAvatar').innerText = userName.charAt(0).toUpperCase();
+        updateWelcomeTitle(userName);
+    }
+
+    window.logout = function() {
+        localStorage.removeItem('currentUser');
+        document.getElementById('authBox').style.display = 'flex';
+        document.getElementById('userFooter').style.display = 'none';
+        currentUserName = "bạn"; updateWelcomeTitle(currentUserName);
+    };
+
+    window.toggleMenu = function(e) { e.stopPropagation(); document.getElementById('attachMenu').classList.toggle('show'); };
+    document.addEventListener('click', (e) => { const menu = document.getElementById('attachMenu'); if (!menu.contains(e.target)) menu.classList.remove('show'); });
+
+    window.selectFeature = function(featureName) {
+        const inp = document.getElementById('inp');
+        inp.value = `[${featureName}]: `; inp.focus();
+        document.getElementById('attachMenu').classList.remove('show');
+    };
+
+    function addRecentChatItem(titleText) {
+        const recentList = document.getElementById('recentList');
+        const itemId = `recent-${Date.now()}`;
+        document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+        recentList.insertAdjacentHTML('afterbegin', `
+            <div class="menu-btn active" id="${itemId}">
+                <span class="menu-btn-icon">💬</span> 
+                <span class="menu-btn-text" id="title-${itemId}">${titleText}</span>
+                <button class="btn-more-item" onclick="openPopover(event, '${itemId}')">⋮</button>
+            </div>
+        `);
+    }
 
     async function send() {
         let inp = document.getElementById('inp');
         let txt = inp.value.trim();
         if (!txt) return;
 
+        if (isFirstMessageInSession) {
+            let sessionTitle = txt.length > 25 ? txt.substring(0, 25) + "..." : txt;
+            addRecentChatItem(sessionTitle);
+            isFirstMessageInSession = false;
+        }
+
+        document.getElementById('searchScreen').classList.remove('active');
+        document.getElementById('libraryScreen').classList.remove('active');
+        document.getElementById('inputWrapperBox').style.display = 'block';
         document.getElementById('welcomeScreen').style.display = 'none';
         let msgs = document.getElementById('msgs');
         msgs.classList.add('active');
@@ -76,6 +484,32 @@
         
         let loading = document.createElement('div');
         loading.className = 'msg ai';
+
+        // Xử lý vẽ ảnh
+        if (txt.startsWith("[Tạo hình ảnh]:") || txt.toLowerCase().includes("tạo ảnh") || txt.toLowerCase().includes("vẽ ảnh")) {
+            let promptText = txt.replace("[Tạo hình ảnh]:", "").trim();
+            if (!promptText) promptText = "bức tranh thiên nhiên đẹp";
+
+            loading.innerText = '🎨 QUYẾT TÂM AI đang vẽ hình ảnh...';
+            msgs.appendChild(loading);
+            msgs.scrollTop = msgs.scrollHeight;
+
+            let imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=800&height=600&nologo=true&seed=${Math.floor(Math.random()*100000)}`;
+            let imgElement = new Image();
+            imgElement.src = imageUrl;
+            imgElement.onload = function() {
+                loading.innerHTML = `
+                    <div>Bức ảnh theo yêu cầu của bạn đây:</div>
+                    <div class="ai-img-box">
+                        <img src="${imageUrl}" alt="AI Image">
+                    </div>
+                `;
+                msgs.scrollTop = msgs.scrollHeight;
+            };
+            inp.value = '';
+            return;
+        }
+
         loading.innerText = 'QUYẾT TÂM AI đang suy nghĩ...';
         msgs.appendChild(loading);
         msgs.scrollTop = msgs.scrollHeight;
