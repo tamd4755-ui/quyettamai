@@ -9,41 +9,26 @@ export default async function handler(req, res) {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'Missing message' });
 
-    const API_KEYS = [
-        "AQ.Ab8RN6IBdQiy-R2Y9a0uYr3E4MgcOHdoHJH3zQ7r8KMU9OYdcw",
-        "AQ.Ab8RN6LwugzoEtrwh9oE6_4mB01_Gb9bo5wEfm094_hjPGMcBw"
-    ];
+    // Khóa API duy nhất của bạn từ Google AI Studio
+    const API_KEY = "AQ.Ab8RN6JYhn6X_rejQpIClwT1hbnA2Yz1hPJfiJzLzWMC8cw8LA";
 
-    let replyText = null;
-    let lastError = null;
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: message }] }]
+            })
+        });
 
-    for (let key of API_KEYS) {
-        try {
-            // Dùng gemini-1.5-flash chuẩn định dạng v1beta
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: message }] }]
-                })
-            });
+        const data = await response.json();
 
-            const data = await response.json();
-
-            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                replyText = data.candidates[0].content.parts[0].text;
-                break;
-            } else if (data.error) {
-                lastError = data.error.message;
-            }
-        } catch (err) {
-            lastError = err.message;
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+        } else {
+            return res.status(500).json({ error: data.error?.message || "Không thể lấy phản hồi từ Gemini." });
         }
-    }
-
-    if (replyText) {
-        return res.status(200).json({ reply: replyText });
-    } else {
-        return res.status(500).json({ error: lastError || "Không thể kết nối Google Gemini." });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
     }
 }
