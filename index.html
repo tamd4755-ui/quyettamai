@@ -270,12 +270,6 @@
 </div>
 
 <script>
-    // Danh sách 2 khóa API trực tiếp
-    const API_KEYS = [
-        "AQ.Ab8RN6IBdQiy-R2Y9a0uYr3E4MgcOHdoHJH3zQ7r8KMU9OYdcw",
-        "AQ.Ab8RN6LwugzoEtrwh9oE6_4mB01_Gb9bo5wEfm094_hjPGMcBw"
-    ];
-
     let selectedImageBase64 = null;
     let selectedImageMimeType = "";
     let currentUserName = "bạn";
@@ -517,35 +511,7 @@
         `);
     }
 
-    // Hàm gọi trực tiếp API Google từ trình duyệt
-    async function fetchGeminiAI(userText, imageBase64, imageMime) {
-        let contentsParts = [];
-        if (imageBase64) {
-            contentsParts.push({ inline_data: { mime_type: imageMime, data: imageBase64 } });
-        }
-        if (userText) {
-            contentsParts.push({ text: userText });
-        }
-
-        for (let key of API_KEYS) {
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: contentsParts }] })
-                });
-
-                const data = await res.json();
-                if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                    return data.candidates[0].content.parts[0].text;
-                }
-            } catch (err) {
-                console.error("Lỗi thử key:", err);
-            }
-        }
-        return null;
-    }
-
+    // HÀM GỬI TIN NHẮN ĐÃ HOÀN THIỆN
     async function send() {
         let inp = document.getElementById('inp');
         let txt = inp.value.trim();
@@ -578,6 +544,7 @@
         let loading = document.createElement('div');
         loading.className = 'msg ai';
 
+        // Xử lý tạo ảnh
         if (txt.startsWith("[Tạo hình ảnh]:") || txt.toLowerCase().includes("tạo ảnh") || txt.toLowerCase().includes("vẽ ảnh")) {
             let promptText = txt.replace("[Tạo hình ảnh]:", "").trim();
             if (!promptText) promptText = "bức tranh thiên nhiên đẹp";
@@ -614,11 +581,22 @@
 
         inp.value = ''; removeSelectedImage();
 
-        const aiReply = await fetchGeminiAI(txt, currentImgBase64, currentImgMime);
-        if (aiReply) {
-            loading.innerText = aiReply;
-        } else {
-            loading.innerText = "Không thể kết nối đến AI. Vui lòng kiểm tra lại kết nối mạng!";
+        // Gọi Backend Serverless Vercel
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: txt })
+            });
+
+            const data = await res.json();
+            if (data.reply) {
+                loading.innerText = data.reply;
+            } else {
+                loading.innerText = "Lỗi từ Gemini: " + (data.error || "Không thể phản hồi.");
+            }
+        } catch (err) {
+            loading.innerText = "Lỗi kết nối mạng hoặc Server!";
         }
 
         msgs.scrollTop = msgs.scrollHeight;
