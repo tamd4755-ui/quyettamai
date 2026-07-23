@@ -9,38 +9,39 @@ export default async function handler(req, res) {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'Missing message' });
 
-    // 2 khóa API dạng AQ... của bạn
+    // 2 khóa API từ ảnh của bạn
     const API_KEYS = [
-        "AQ.Ab8RN6KGHFsr6hE9bidFF-rv_EKr24ZrrEJOJhbPYBeHLpuR7w",
-        "AQ.Ab8RN6LSP5AoTL3vKtLXYQVo2v2nEz5cCtKLkeMB6Tl2w8hmgw"
+        "AQ.Ab8RN6IBdQiy-R2Y9a0uYr3E4MgcOHdoHJH3zQ7r8KMU9OYdcw",
+        "AQ.Ab8RN6LwugzoEtrwh9oE6_4mB01_Gb9bo5wEfm094_hjPGMcBw"
     ];
 
-    let data = null;
-    let success = false;
+    let replyText = null;
 
-    for (let i = 0; i < API_KEYS.length; i++) {
+    for (let key of API_KEYS) {
         try {
-            const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+            // Sửa đường dẫn chính xác bằng tham số ?key=
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${API_KEYS[i]}`
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: message }] }]
                 })
             });
-            data = await response.json();
-            if (data.candidates && data.candidates[0]) {
-                success = true;
-                break;
+
+            const data = await response.json();
+            
+            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                replyText = data.candidates[0].content.parts[0].text;
+                break; // Tìm thấy phản hồi thành công thì thoát ngay vòng lặp
             }
-        } catch (err) {}
+        } catch (err) {
+            console.error("Lỗi khi kết nối API:", err);
+        }
     }
 
-    if (success && data.candidates && data.candidates[0].content) {
-        return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+    if (replyText) {
+        return res.status(200).json({ reply: replyText });
     } else {
-        return res.status(500).json({ error: "Không thể kết nối Google Gemini. Vui lòng kiểm tra lại khóa API." });
+        return res.status(500).json({ error: "Không thể kết nối Google Gemini. Vui lòng thử lại sau giây lát!" });
     }
 }
