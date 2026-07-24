@@ -87,18 +87,18 @@
         .messages { flex: 1; padding: 20px 15%; overflow-y: auto; display: none; flex-direction: column; gap: 16px; background: #131314; }
         .messages.active { display: flex; }
         
-        /* BONG BÓNG TIN NHẮN VÀ NÚT SAO CHÉP */
-        .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; position: relative; }
+        /* SỬA BONG BÓNG TIN NHẮN TỰ ĐỘNG ÔM SÁT CHỮ */
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 75%; width: fit-content; position: relative; }
         .msg-wrapper.user-wrapper { align-self: flex-end; align-items: flex-end; }
         .msg-wrapper.ai-wrapper { align-self: flex-start; align-items: flex-start; }
         
-        .msg { padding: 12px 18px; border-radius: 18px; font-size: 1rem; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; width: 100%; }
+        .msg { padding: 10px 16px; border-radius: 18px; font-size: 0.98rem; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; width: fit-content; max-width: 100%; display: inline-block; }
         .msg img { max-width: 100%; border-radius: 12px; margin-top: 8px; display: block; }
         .user { background: #282a2d; color: #fff; border-bottom-right-radius: 4px; }
         .ai { background: #1e1e20; color: #e3e3e3; border-bottom-left-radius: 4px; border: 1px solid #28292a; }
 
         .msg-actions { display: flex; gap: 6px; margin-top: 4px; padding: 0 4px; }
-        .btn-copy-msg { background: #282a2d; border: 1px solid #3c3f43; color: #aaa; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: 0.2s; }
+        .btn-copy-msg { background: #282a2d; border: 1px solid #3c3f43; color: #aaa; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; transition: 0.2s; }
         .btn-copy-msg:hover { background: #3c3f43; color: #fff; }
 
         .ai-img-box { position: relative; margin-top: 8px; }
@@ -518,13 +518,13 @@
         `);
     }
 
-    // HÀM SAO CHÉP VĂN BẢN
+    // SAO CHÉP CHUẨN
     window.copyText = function(btnElem, textToCopy) {
         navigator.clipboard.writeText(textToCopy).then(() => {
             btnElem.innerText = '✓';
             setTimeout(() => { btnElem.innerText = '📋'; }, 2000);
         }).catch(err => {
-            console.error('Không thể chép:', err);
+            console.error('Lỗi chép:', err);
         });
     };
 
@@ -548,14 +548,11 @@
         let msgs = document.getElementById('msgs');
         msgs.classList.add('active');
 
-        // Tạo khung bọc tin nhắn người dùng có nút sao chép
+        // Khung bong bóng thu gọn chuẩn ôm sát chữ
         let msgId = 'msg-' + Date.now();
         let userMsgHtml = `
             <div class='msg-wrapper user-wrapper'>
-                <div class='msg user' id='${msgId}'>
-                    ${currentImg ? `<img src="${currentImg}">` : ''}
-                    ${txt ? `<div>${txt}</div>` : ''}
-                </div>
+                <div class='msg user' id='${msgId}'>${currentImg ? `<img src="${currentImg}">` : ''}${txt ? txt : ''}</div>
                 ${txt ? `<div class='msg-actions'><button class='btn-copy-msg' onclick="copyText(this, \`${txt.replace(/`/g, '\\`')}\`)" title='Sao chép'>📋</button></div>` : ''}
             </div>
         `;
@@ -626,7 +623,6 @@
                 let aiReply = data.choices[0].message.content;
                 loadingMsg.innerText = aiReply;
                 
-                // Thêm nút sao chép cho tin nhắn của AI
                 let actionsDiv = document.createElement('div');
                 actionsDiv.className = 'msg-actions';
                 actionsDiv.innerHTML = `<button class='btn-copy-msg' onclick="copyText(this, \`${aiReply.replace(/`/g, '\\`')}\`)" title='Sao chép'>📋</button>`;
