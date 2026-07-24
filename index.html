@@ -86,10 +86,20 @@
 
         .messages { flex: 1; padding: 20px 15%; overflow-y: auto; display: none; flex-direction: column; gap: 16px; background: #131314; }
         .messages.active { display: flex; }
-        .msg { padding: 12px 18px; border-radius: 18px; max-width: 80%; font-size: 1rem; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
+        
+        /* BONG BÓNG TIN NHẮN VÀ NÚT SAO CHÉP */
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; position: relative; }
+        .msg-wrapper.user-wrapper { align-self: flex-end; align-items: flex-end; }
+        .msg-wrapper.ai-wrapper { align-self: flex-start; align-items: flex-start; }
+        
+        .msg { padding: 12px 18px; border-radius: 18px; font-size: 1rem; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; width: 100%; }
         .msg img { max-width: 100%; border-radius: 12px; margin-top: 8px; display: block; }
-        .user { background: #282a2d; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .ai { background: #1e1e20; color: #e3e3e3; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #28292a; }
+        .user { background: #282a2d; color: #fff; border-bottom-right-radius: 4px; }
+        .ai { background: #1e1e20; color: #e3e3e3; border-bottom-left-radius: 4px; border: 1px solid #28292a; }
+
+        .msg-actions { display: flex; gap: 6px; margin-top: 4px; padding: 0 4px; }
+        .btn-copy-msg { background: #282a2d; border: 1px solid #3c3f43; color: #aaa; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: 0.2s; }
+        .btn-copy-msg:hover { background: #3c3f43; color: #fff; }
 
         .ai-img-box { position: relative; margin-top: 8px; }
 
@@ -124,7 +134,7 @@
             .sidebar-overlay.show { display: block; }
             .welcome-title { font-size: 1.6rem; padding: 0 10px; }
             .messages { padding: 12px 10px; }
-            .msg { max-width: 90%; font-size: 0.92rem; padding: 10px 14px; }
+            .msg-wrapper { max-width: 90%; }
             .input-wrapper-center { padding: 0 10px 16px 10px; }
             .library-screen { padding: 20px 16px; }
             .attach-menu { width: calc(100% - 20px); left: 10px; }
@@ -508,23 +518,15 @@
         `);
     }
 
-    // TÌM KIẾM TRỰC TIẾP QUA DUCKDUCKGO (MIỄN PHÍ - KHÔNG CẦN API KEY)
-    async function searchDuckDuckGo(query) {
-        try {
-            const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
-            const data = await res.json();
-            let results = [];
-            if (data.AbstractText) results.push(data.AbstractText);
-            if (data.RelatedTopics && data.RelatedTopics.length > 0) {
-                data.RelatedTopics.slice(0, 3).forEach(item => {
-                    if (item.Text) results.push(item.Text);
-                });
-            }
-            return results.join("\n");
-        } catch (e) {
-            return "";
-        }
-    }
+    // HÀM SAO CHÉP VĂN BẢN
+    window.copyText = function(btnElem, textToCopy) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            btnElem.innerText = '✓';
+            setTimeout(() => { btnElem.innerText = '📋'; }, 2000);
+        }).catch(err => {
+            console.error('Không thể chép:', err);
+        });
+    };
 
     async function send() {
         let inp = document.getElementById('inp');
@@ -546,29 +548,39 @@
         let msgs = document.getElementById('msgs');
         msgs.classList.add('active');
 
-        let userMsgHtml = `<div class='msg user'>`;
-        if (currentImg) { userMsgHtml += `<img src="${currentImg}">`; }
-        if (txt) { userMsgHtml += `<div>${txt}</div>`; }
-        userMsgHtml += `</div>`;
+        // Tạo khung bọc tin nhắn người dùng có nút sao chép
+        let msgId = 'msg-' + Date.now();
+        let userMsgHtml = `
+            <div class='msg-wrapper user-wrapper'>
+                <div class='msg user' id='${msgId}'>
+                    ${currentImg ? `<img src="${currentImg}">` : ''}
+                    ${txt ? `<div>${txt}</div>` : ''}
+                </div>
+                ${txt ? `<div class='msg-actions'><button class='btn-copy-msg' onclick="copyText(this, \`${txt.replace(/`/g, '\\`')}\`)" title='Sao chép'>📋</button></div>` : ''}
+            </div>
+        `;
         msgs.innerHTML += userMsgHtml;
         
-        let loading = document.createElement('div');
-        loading.className = 'msg ai';
+        let loadingWrapper = document.createElement('div');
+        loadingWrapper.className = 'msg-wrapper ai-wrapper';
+        let loadingMsg = document.createElement('div');
+        loadingMsg.className = 'msg ai';
 
         // Xử lý vẽ ảnh
         if (txt.startsWith("[Tạo hình ảnh]:") || txt.toLowerCase().includes("tạo ảnh") || txt.toLowerCase().includes("vẽ ảnh")) {
             let promptText = txt.replace("[Tạo hình ảnh]:", "").trim();
             if (!promptText) promptText = "bức tranh thiên nhiên đẹp";
 
-            loading.innerText = '🎨 QUYẾT TÂM AI đang vẽ hình ảnh...';
-            msgs.appendChild(loading);
+            loadingMsg.innerText = '🎨 QUYẾT TÂM AI đang vẽ hình ảnh...';
+            loadingWrapper.appendChild(loadingMsg);
+            msgs.appendChild(loadingWrapper);
             msgs.scrollTop = msgs.scrollHeight;
 
             let imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=800&height=600&nologo=true&seed=${Math.floor(Math.random()*100000)}`;
             let imgElement = new Image();
             imgElement.src = imageUrl;
             imgElement.onload = function() {
-                loading.innerHTML = `
+                loadingMsg.innerHTML = `
                     <div>Bức ảnh theo yêu cầu của bạn đây:</div>
                     <div class="ai-img-box">
                         <img src="${imageUrl}" alt="AI Image">
@@ -580,32 +592,19 @@
             return;
         }
 
-        loading.innerText = 'QUYẾT TÂM AI đang suy nghĩ...';
-        msgs.appendChild(loading);
+        loadingMsg.innerText = 'QUYẾT TÂM AI đang suy nghĩ...';
+        loadingWrapper.appendChild(loadingMsg);
+        msgs.appendChild(loadingWrapper);
         msgs.scrollTop = msgs.scrollHeight;
 
         inp.value = ''; removeSelectedImage();
 
         let cleanQuery = txt.replace("[Tìm kiếm trên mạng]:", "").trim();
-        let searchContext = "";
-        
-        if (txt.startsWith("[Tìm kiếm trên mạng]:") || txt.toLowerCase().includes("mới nhất") || txt.toLowerCase().includes("hiện tại") || txt.toLowerCase().includes("ai là")) {
-            loading.innerText = '🌐 Đang tìm kiếm tin tức trên mạng...';
-            searchContext = await searchDuckDuckGo(cleanQuery);
-        }
+        chatHistory.push({ role: "user", content: cleanQuery });
 
-        // TỰ ĐỘNG LƯU LỊCH SỬ CHAT VÀO KHU VỰC
-        let userContentPrompt = cleanQuery;
-        if (searchContext) {
-            userContentPrompt = `[Thông tin tìm kiếm trên mạng mới nhất]:\n${searchContext}\n\n[Câu hỏi của người dùng]: ${cleanQuery}`;
-        }
-
-        chatHistory.push({ role: "user", content: userContentPrompt });
-
-        // Cấu hình System Prompt chuẩn để AI không bao giờ nhận nhầm nhân xưng
         let systemPrompt = {
             role: "system",
-            content: "Bạn là QUYẾT TÂM AI, một trợ lý ảo thông minh. Khi người dùng hỏi về các lãnh đạo, nhân vật chính trị (như Tổng Bí thư, Chủ tịch nước Tô Lâm), bạn hãy trả lời chính xác thông tin về nhân vật đó. Tuyệt đối không xưng 'tôi là Tô Lâm' hay nhầm bản thân là người dùng/chính trị gia."
+            content: "Bạn là QUYẾT TÂM AI, một trợ lý ảo thông minh. Khi người dùng hỏi về các lãnh đạo, nhân vật chính trị (như Tô Lâm), bạn hãy trả lời chính xác thông tin về nhân vật đó. Tuyệt đối không xưng 'tôi là Tô Lâm' hay nhầm bản thân là nhân vật được hỏi."
         };
 
         try {
@@ -625,13 +624,20 @@
 
             if (data.choices && data.choices[0] && data.choices[0].message) {
                 let aiReply = data.choices[0].message.content;
-                loading.innerText = aiReply;
+                loadingMsg.innerText = aiReply;
+                
+                // Thêm nút sao chép cho tin nhắn của AI
+                let actionsDiv = document.createElement('div');
+                actionsDiv.className = 'msg-actions';
+                actionsDiv.innerHTML = `<button class='btn-copy-msg' onclick="copyText(this, \`${aiReply.replace(/`/g, '\\`')}\`)" title='Sao chép'>📋</button>`;
+                loadingWrapper.appendChild(actionsDiv);
+
                 chatHistory.push({ role: "assistant", content: aiReply });
             } else {
-                loading.innerText = "Lỗi phản hồi: " + (data.error?.message || "Không thể lấy dữ liệu.");
+                loadingMsg.innerText = "Lỗi phản hồi: " + (data.error?.message || "Không thể lấy dữ liệu.");
             }
         } catch (err) {
-            loading.innerText = "Lỗi kết nối: " + err.message;
+            loadingMsg.innerText = "Lỗi kết nối: " + err.message;
         }
 
         msgs.scrollTop = msgs.scrollHeight;
