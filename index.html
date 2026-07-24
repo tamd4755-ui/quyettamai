@@ -107,7 +107,6 @@
         .btn-send { background: #282a2d; color: #aaa; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; transition: 0.2s; flex-shrink: 0; }
         .btn-send:hover { background: #1a73e8; color: #fff; }
 
-        /* Menu đính kèm giống ảnh gốc */
         .attach-menu { display: none; position: absolute; bottom: 80px; left: 16px; background: #282a2d; border-radius: 12px; padding: 8px; width: 340px; z-index: 100; flex-direction: column; gap: 4px; border: 1px solid #3c3f43; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
         .attach-menu.show { display: flex; }
         .menu-item { display: flex; align-items: center; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: #fff; gap: 12px; transition: 0.2s; }
@@ -240,7 +239,6 @@
                 <button class="btn-remove-img" onclick="removeSelectedImage()">✕</button>
             </div>
 
-            <!-- Menu đính kèm theo đúng ảnh yêu cầu -->
             <div class="attach-menu" id="attachMenu">
                 <div class="menu-item" onclick="triggerFileInput()">
                     <span class="menu-item-icon">📎</span>
@@ -280,6 +278,7 @@
 <script>
     const GROQ_API_KEY = "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";
 
+    let chatHistory = [];
     let selectedImageBase64 = null;
     let currentUserName = "bạn";
     let activeTargetItemId = null;
@@ -368,6 +367,7 @@
         document.getElementById('msgs').classList.remove('active');
         document.getElementById('welcomeScreen').style.display = 'flex';
         isFirstMessageInSession = true;
+        chatHistory = [];
         document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById('btnNewChat').classList.add('active');
         closeMobileSidebar();
@@ -508,6 +508,24 @@
         `);
     }
 
+    // TÌM KIẾM TRỰC TIẾP QUA DUCKDUCKGO (MIỄN PHÍ - KHÔNG CẦN API KEY)
+    async function searchDuckDuckGo(query) {
+        try {
+            const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+            const data = await res.json();
+            let results = [];
+            if (data.AbstractText) results.push(data.AbstractText);
+            if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+                data.RelatedTopics.slice(0, 3).forEach(item => {
+                    if (item.Text) results.push(item.Text);
+                });
+            }
+            return results.join("\n");
+        } catch (e) {
+            return "";
+        }
+    }
+
     async function send() {
         let inp = document.getElementById('inp');
         let txt = inp.value.trim();
@@ -537,7 +555,7 @@
         let loading = document.createElement('div');
         loading.className = 'msg ai';
 
-        // Xử lý tạo hình ảnh
+        // Xử lý vẽ ảnh
         if (txt.startsWith("[Tạo hình ảnh]:") || txt.toLowerCase().includes("tạo ảnh") || txt.toLowerCase().includes("vẽ ảnh")) {
             let promptText = txt.replace("[Tạo hình ảnh]:", "").trim();
             if (!promptText) promptText = "bức tranh thiên nhiên đẹp";
@@ -568,6 +586,28 @@
 
         inp.value = ''; removeSelectedImage();
 
+        let cleanQuery = txt.replace("[Tìm kiếm trên mạng]:", "").trim();
+        let searchContext = "";
+        
+        if (txt.startsWith("[Tìm kiếm trên mạng]:") || txt.toLowerCase().includes("mới nhất") || txt.toLowerCase().includes("hiện tại") || txt.toLowerCase().includes("ai là")) {
+            loading.innerText = '🌐 Đang tìm kiếm tin tức trên mạng...';
+            searchContext = await searchDuckDuckGo(cleanQuery);
+        }
+
+        // TỰ ĐỘNG LƯU LỊCH SỬ CHAT VÀO KHU VỰC
+        let userContentPrompt = cleanQuery;
+        if (searchContext) {
+            userContentPrompt = `[Thông tin tìm kiếm trên mạng mới nhất]:\n${searchContext}\n\n[Câu hỏi của người dùng]: ${cleanQuery}`;
+        }
+
+        chatHistory.push({ role: "user", content: userContentPrompt });
+
+        // Cấu hình System Prompt chuẩn để AI không bao giờ nhận nhầm nhân xưng
+        let systemPrompt = {
+            role: "system",
+            content: "Bạn là QUYẾT TÂM AI, một trợ lý ảo thông minh. Khi người dùng hỏi về các lãnh đạo, nhân vật chính trị (như Tổng Bí thư, Chủ tịch nước Tô Lâm), bạn hãy trả lời chính xác thông tin về nhân vật đó. Tuyệt đối không xưng 'tôi là Tô Lâm' hay nhầm bản thân là người dùng/chính trị gia."
+        };
+
         try {
             const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
@@ -576,7 +616,7 @@
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    messages: [{ role: "user", content: txt || "Hãy mô tả bức ảnh này giúp tôi." }],
+                    messages: [systemPrompt, ...chatHistory],
                     model: "llama-3.3-70b-versatile"
                 })
             });
@@ -584,7 +624,9 @@
             const data = await response.json();
 
             if (data.choices && data.choices[0] && data.choices[0].message) {
-                loading.innerText = data.choices[0].message.content;
+                let aiReply = data.choices[0].message.content;
+                loading.innerText = aiReply;
+                chatHistory.push({ role: "assistant", content: aiReply });
             } else {
                 loading.innerText = "Lỗi phản hồi: " + (data.error?.message || "Không thể lấy dữ liệu.");
             }
